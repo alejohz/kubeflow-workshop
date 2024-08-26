@@ -1,0 +1,600 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: training-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22, pipelines.kubeflow.org/pipeline_compilation_time: '2024-06-09T09:35:31.966793',
+    pipelines.kubeflow.org/pipeline_spec: '{"name": "Training pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22}
+spec:
+  entrypoint: training-pipeline
+  templates:
+  - name: get-data
+    container:
+      args: [--output-text, /tmp/outputs/output_text/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+        install --quiet --no-warn-script-location 'pandas' 'scikit-learn' --user)
+        && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def get_data(output_text_path):
+            import pandas as pd
+            from sklearn.datasets import load_breast_cancer
+            import logging
+
+            logging.basicConfig(level=logging.INFO)
+            logger = logging.getLogger(__name__)
+
+            logger.info(f'Reading data from source')
+
+            data = load_breast_cancer()
+            df = pd.DataFrame(data.data, columns=data.feature_names)
+            df['target'] = data.target
+            logger.info(f'Saving processed data to {output_text_path}')
+            df["id"] = df.index.values
+
+            df.to_csv(output_text_path, index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Get data', description='')
+        _parser.add_argument("--output-text", dest="output_text_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = get_data(**_parsed_args)
+      image: python:3.8
+    outputs:
+      artifacts:
+      - {name: get-data-output_text, path: /tmp/outputs/output_text/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--output-text", {"outputPath": "output_text"}], "command": ["sh",
+          "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+          pip install --quiet --no-warn-script-location ''pandas'' ''scikit-learn''
+          --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef get_data(output_text_path):\n    import
+          pandas as pd\n    from sklearn.datasets import load_breast_cancer\n    import
+          logging\n\n    logging.basicConfig(level=logging.INFO)\n    logger = logging.getLogger(__name__)\n\n    logger.info(f''Reading
+          data from source'')\n\n    data = load_breast_cancer()\n    df = pd.DataFrame(data.data,
+          columns=data.feature_names)\n    df[''target''] = data.target\n    logger.info(f''Saving
+          processed data to {output_text_path}'')\n    df[\"id\"] = df.index.values\n\n    df.to_csv(output_text_path,
+          index=False)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Get
+          data'', description='''')\n_parser.add_argument(\"--output-text\", dest=\"output_text_path\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = get_data(**_parsed_args)\n"],
+          "image": "python:3.8"}}, "name": "Get data", "outputs": [{"name": "output_text",
+          "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: get-noise-date
+    container:
+      args: [--output, /tmp/outputs/output/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+        install --quiet --no-warn-script-location 'pandas' 'scikit-learn' --user)
+        && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def get_noise_date(output_path):
+            from random import random
+            from sklearn.datasets import load_breast_cancer
+            import pandas as pd
+            data = load_breast_cancer()
+            df = pd.DataFrame(data.data, columns=data.feature_names)
+            df_fake = pd.DataFrame([random() for x in range(df.shape[0])], columns=["noise"])
+            df_fake["target"] = data.target
+            df_fake["id"] = df["id"] = df.index.values
+
+            df_fake.to_csv(output_path, index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Get noise date', description='')
+        _parser.add_argument("--output", dest="output_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = get_noise_date(**_parsed_args)
+      image: python:3.8
+    outputs:
+      artifacts:
+      - {name: get-noise-date-output, path: /tmp/outputs/output/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--output", {"outputPath": "output"}], "command": ["sh", "-c",
+          "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+          pip install --quiet --no-warn-script-location ''pandas'' ''scikit-learn''
+          --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef get_noise_date(output_path):\n    from
+          random import random\n    from sklearn.datasets import load_breast_cancer\n    import
+          pandas as pd\n    data = load_breast_cancer()\n    df = pd.DataFrame(data.data,
+          columns=data.feature_names)\n    df_fake = pd.DataFrame([random() for x
+          in range(df.shape[0])], columns=[\"noise\"])\n    df_fake[\"target\"] =
+          data.target\n    df_fake[\"id\"] = df[\"id\"] = df.index.values\n\n    df_fake.to_csv(output_path,
+          index=False)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Get
+          noise date'', description='''')\n_parser.add_argument(\"--output\", dest=\"output_path\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = get_noise_date(**_parsed_args)\n"],
+          "image": "python:3.8"}}, "name": "Get noise date", "outputs": [{"name":
+          "output", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: join-data
+    container:
+      args: [--data, /tmp/inputs/data/data, --noise, /tmp/inputs/noise/data, --output,
+        /tmp/outputs/output/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+        install --quiet --no-warn-script-location 'pandas' 'scikit-learn' --user)
+        && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def join_data(data_path, noise_path, output_path):
+            """
+            Join multiple DataFrames based on the 'id' column while ensuring no duplicated 'id' and 'target' values.
+            """
+            import pandas as pd
+
+            df = pd.read_csv(data_path)
+
+            df_noise = pd.read_csv(noise_path)
+
+            merged_df = pd.merge(df_noise, df, on=['id', 'target'], how='inner')
+
+            merged_df = merged_df.drop('id', axis=1)
+            merged_df.to_csv(output_path, index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Join data', description="Join multiple DataFrames based on the 'id' column while ensuring no duplicated 'id' and 'target' values.")
+        _parser.add_argument("--data", dest="data_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--noise", dest="noise_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output", dest="output_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = join_data(**_parsed_args)
+      image: python:3.8
+    inputs:
+      artifacts:
+      - {name: get-data-output_text, path: /tmp/inputs/data/data}
+      - {name: get-noise-date-output, path: /tmp/inputs/noise/data}
+    outputs:
+      artifacts:
+      - {name: join-data-output, path: /tmp/outputs/output/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Join
+          multiple DataFrames based on the ''id'' column while ensuring no duplicated
+          ''id'' and ''target'' values.", "implementation": {"container": {"args":
+          ["--data", {"inputPath": "data"}, "--noise", {"inputPath": "noise"}, "--output",
+          {"outputPath": "output"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' ''scikit-learn''
+          || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef join_data(data_path, noise_path,
+          output_path):\n    \"\"\"\n    Join multiple DataFrames based on the ''id''
+          column while ensuring no duplicated ''id'' and ''target'' values.\n    \"\"\"\n    import
+          pandas as pd\n\n    df = pd.read_csv(data_path)\n\n    df_noise = pd.read_csv(noise_path)\n\n    merged_df
+          = pd.merge(df_noise, df, on=[''id'', ''target''], how=''inner'')\n\n    merged_df
+          = merged_df.drop(''id'', axis=1)\n    merged_df.to_csv(output_path, index=False)\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Join data'', description=\"Join
+          multiple DataFrames based on the ''id'' column while ensuring no duplicated
+          ''id'' and ''target'' values.\")\n_parser.add_argument(\"--data\", dest=\"data_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--noise\",
+          dest=\"noise_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output\",
+          dest=\"output_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = join_data(**_parsed_args)\n"], "image": "python:3.8"}}, "inputs": [{"name":
+          "data"}, {"name": "noise"}], "name": "Join data", "outputs": [{"name": "output",
+          "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: preprocess-data
+    container:
+      args: [--input-train, /tmp/inputs/input_train/data, --scaled, /tmp/outputs/scaled/data,
+        --scaler, /tmp/outputs/scaler/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+        install --quiet --no-warn-script-location 'pandas' 'scikit-learn' --user)
+        && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def preprocess_data(input_train, scaled_path, scaler_path):
+            import os
+            import pandas as pd
+            from sklearn.preprocessing import StandardScaler
+            import joblib
+
+            df = pd.read_csv(input_train)
+            X = df.drop(columns=['target'])
+            y = df['target']
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            df_scaled = pd.concat([pd.DataFrame(X_scaled, columns=X.columns), y], axis=1)
+            df_scaled.to_csv(scaled_path, index=False)
+
+            joblib.dump(scaler, scaler_path)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Preprocess data', description='')
+        _parser.add_argument("--input-train", dest="input_train", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--scaled", dest="scaled_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--scaler", dest="scaler_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = preprocess_data(**_parsed_args)
+      image: python:3.8
+    inputs:
+      artifacts:
+      - {name: split-data-output_train, path: /tmp/inputs/input_train/data}
+    outputs:
+      artifacts:
+      - {name: preprocess-data-scaled, path: /tmp/outputs/scaled/data}
+      - {name: preprocess-data-scaler, path: /tmp/outputs/scaler/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--input-train", {"inputPath": "input_train"}, "--scaled", {"outputPath":
+          "scaled"}, "--scaler", {"outputPath": "scaler"}], "command": ["sh", "-c",
+          "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m
+          pip install --quiet --no-warn-script-location ''pandas'' ''scikit-learn''
+          --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef preprocess_data(input_train,
+          scaled_path, scaler_path):\n    import os\n    import pandas as pd\n    from
+          sklearn.preprocessing import StandardScaler\n    import joblib\n\n    df
+          = pd.read_csv(input_train)\n    X = df.drop(columns=[''target''])\n    y
+          = df[''target'']\n    scaler = StandardScaler()\n    X_scaled = scaler.fit_transform(X)\n    df_scaled
+          = pd.concat([pd.DataFrame(X_scaled, columns=X.columns), y], axis=1)\n    df_scaled.to_csv(scaled_path,
+          index=False)\n\n    joblib.dump(scaler, scaler_path)\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Preprocess data'', description='''')\n_parser.add_argument(\"--input-train\",
+          dest=\"input_train\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--scaled\",
+          dest=\"scaled_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parser.add_argument(\"--scaler\", dest=\"scaler_path\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = preprocess_data(**_parsed_args)\n"],
+          "image": "python:3.8"}}, "inputs": [{"name": "input_train"}], "name": "Preprocess
+          data", "outputs": [{"name": "scaled", "type": "String"}, {"name": "scaler",
+          "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: split-data
+    container:
+      args: [--text, /tmp/inputs/text/data, --output-train, /tmp/outputs/output_train/data,
+        --output-val, /tmp/outputs/output_val/data, --output-test, /tmp/outputs/output_test/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip
+        install --quiet --no-warn-script-location 'pandas' 'scikit-learn' --user)
+        && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def split_data(
+            text_path,
+            output_train,
+            output_val,
+            output_test
+        ):
+
+            import pandas as pd
+            from sklearn.model_selection import train_test_split
+
+            df = pd.read_csv(text_path)
+            X = df.drop(columns=['target'])
+            y = df['target']
+            X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
+            X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+            pd.concat([X_train, y_train], axis=1).to_csv(output_train, index=False)
+            pd.concat([X_val, y_val], axis=1).to_csv(output_val, index=False)
+            pd.concat([X_test, y_test], axis=1).to_csv(output_test, index=False)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Split data', description='')
+        _parser.add_argument("--text", dest="text_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-train", dest="output_train", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-val", dest="output_val", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--output-test", dest="output_test", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = split_data(**_parsed_args)
+      image: python:3.8
+    inputs:
+      artifacts:
+      - {name: join-data-output, path: /tmp/inputs/text/data}
+    outputs:
+      artifacts:
+      - {name: split-data-output_test, path: /tmp/outputs/output_test/data}
+      - {name: split-data-output_train, path: /tmp/outputs/output_train/data}
+      - {name: split-data-output_val, path: /tmp/outputs/output_val/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--text", {"inputPath": "text"}, "--output-train", {"outputPath":
+          "output_train"}, "--output-val", {"outputPath": "output_val"}, "--output-test",
+          {"outputPath": "output_test"}], "command": ["sh", "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1
+          python3 -m pip install --quiet --no-warn-script-location ''pandas'' ''scikit-learn''
+          || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef split_data(\n    text_path,\n    output_train,\n    output_val,\n    output_test\n):\n\n    import
+          pandas as pd\n    from sklearn.model_selection import train_test_split\n\n    df
+          = pd.read_csv(text_path)\n    X = df.drop(columns=[''target''])\n    y =
+          df[''target'']\n    X_train, X_temp, y_train, y_temp = train_test_split(X,
+          y, test_size=0.3, random_state=42)\n    X_val, X_test, y_val, y_test = train_test_split(X_temp,
+          y_temp, test_size=0.5, random_state=42)\n    pd.concat([X_train, y_train],
+          axis=1).to_csv(output_train, index=False)\n    pd.concat([X_val, y_val],
+          axis=1).to_csv(output_val, index=False)\n    pd.concat([X_test, y_test],
+          axis=1).to_csv(output_test, index=False)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Split
+          data'', description='''')\n_parser.add_argument(\"--text\", dest=\"text_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-train\",
+          dest=\"output_train\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-val\", dest=\"output_val\",
+          type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--output-test\",
+          dest=\"output_test\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = split_data(**_parsed_args)\n"], "image": "python:3.8"}}, "inputs": [{"name":
+          "text"}], "name": "Split data", "outputs": [{"name": "output_train", "type":
+          "String"}, {"name": "output_val", "type": "String"}, {"name": "output_test",
+          "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: train-model
+    container:
+      args: [--input-train, /tmp/inputs/input_train/data, --input-val, /tmp/inputs/input_val/data,
+        --scaler, /tmp/inputs/scaler/data, --num-of-trial, '100', --model, /tmp/outputs/model/data]
+      command:
+      - sh
+      - -c
+      - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+        'pandas' 'scikit-learn' 'matplotlib' 'numpy' 'joblib' 'optuna' || PIP_DISABLE_PIP_VERSION_CHECK=1
+        python3 -m pip install --quiet --no-warn-script-location 'pandas' 'scikit-learn'
+        'matplotlib' 'numpy' 'joblib' 'optuna' --user) && "$0" "$@"
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n \
+        \   os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+        \ndef train_model(input_train, input_val, scaler_path, model_path, num_of_trial\
+        \ = 100):\n\n    import joblib\n    import optuna\n    import pandas as pd\n\
+        \    from sklearn.pipeline import Pipeline\n    from sklearn.linear_model\
+        \ import LogisticRegression\n    from sklearn.ensemble import RandomForestClassifier\n\
+        \    from sklearn.metrics import accuracy_score\n\n    import logging\n\n\
+        \    logging.basicConfig(level=logging.INFO)\n    logger = logging.getLogger(__name__)\n\
+        \n    logger.info(f'Reading data from source')\n\n    df_train= pd.read_csv(input_train)\n\
+        \    X_train = df_train.drop(columns=['target'])\n    y_train = df_train['target']\n\
+        \n    df_val= pd.read_csv(input_val)\n    X_val = df_val.drop(columns=['target'])\n\
+        \    y_val = df_val['target']\n\n    logger.info(f'Reading Scaler')\n\n  \
+        \  scaler = joblib.load(scaler_path)\n\n    # Scale the data\n    X_train_scaled\
+        \ = scaler.transform(X_train)\n    X_val_scaled = scaler.transform(X_val)\n\
+        \n    # Define the objective function for Optuna\n    def objective(trial):\n\
+        \        model_name = trial.suggest_categorical('model', ['LogisticRegression',\
+        \ 'RandomForest'])\n\n        if model_name == 'LogisticRegression':\n   \
+        \         C = trial.suggest_float('C', 1e-4, 1e2, log=True)\n            l1_ratio\
+        \ = trial.suggest_float('l1_ratio', 0, 1)\n\n            model = LogisticRegression(\n\
+        \                penalty='elasticnet', \n                C=C, \n         \
+        \       solver = 'saga',\n                l1_ratio=l1_ratio\n            )\n\
+        \n        else: \n            n_estimators = trial.suggest_int('n_estimators',\
+        \ 10, 100)\n            max_depth = trial.suggest_int('max_depth', 2, 8)\n\
+        \            min_samples_split = trial.suggest_int('min_samples_split', 2,\
+        \ 10)\n            model = RandomForestClassifier(\n                n_estimators=n_estimators,\n\
+        \                max_depth=max_depth,\n                min_samples_split=min_samples_split\n\
+        \            )\n\n        model.fit(X_train_scaled, y_train)\n        y_pred\
+        \ = model.predict(X_val_scaled)\n        accuracy = accuracy_score(y_val,\
+        \ y_pred)\n\n        logger.info(\"*\"*30)\n        logger.info(f'{model}')\n\
+        \        logger.info(\"*\"*30)\n        logger.info(f\"accuracy {accuracy}\"\
+        )\n\n        return accuracy\n\n    logger.info(f'Hiperparameter tunning')\n\
+        \n    study = optuna.create_study(direction='maximize')\n    study.optimize(objective,\
+        \ n_trials=num_of_trial)\n\n    # Get the best model\n    best_trial = study.best_trial\n\
+        \    if best_trial.params['model'] == 'LogisticRegression':\n            best_model\
+        \ = LogisticRegression(\n                penalty='elasticnet',\n         \
+        \       C=best_trial.params['C'],\n                solver='saga',\n      \
+        \          l1_ratio=best_trial.params['l1_ratio']\n            )\n    else:\n\
+        \        best_model = RandomForestClassifier(\n            n_estimators=best_trial.params['n_estimators'],\n\
+        \            max_depth=best_trial.params['max_depth'],\n            min_samples_split=best_trial.params['min_samples_split']\n\
+        \        )\n\n    final_pipeline = Pipeline([\n        ('scaler', scaler),\n\
+        \        ('model', best_model)\n    ])\n\n    # Train the final pipeline on\
+        \ the full training data\n    final_pipeline.fit(X_train, y_train)\n\n   \
+        \ # Evaluate the model on the validation data\n    y_val_pred = final_pipeline.predict(X_val)\n\
+        \    val_accuracy = accuracy_score(y_val, y_val_pred)\n\n    logging.info(f\"\
+        Best model parameters: {best_trial.params}\")\n    logging.info(f\"Validation\
+        \ accuracy: {val_accuracy}\")\n\n    logging.info(f\"Saving model at: {model_path}\"\
+        )\n\n    joblib.dump(final_pipeline, model_path)\n\nimport argparse\n_parser\
+        \ = argparse.ArgumentParser(prog='Train model', description='')\n_parser.add_argument(\"\
+        --input-train\", dest=\"input_train\", type=str, required=True, default=argparse.SUPPRESS)\n\
+        _parser.add_argument(\"--input-val\", dest=\"input_val\", type=str, required=True,\
+        \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--scaler\", dest=\"scaler_path\"\
+        , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+        --num-of-trial\", dest=\"num_of_trial\", type=int, required=False, default=argparse.SUPPRESS)\n\
+        _parser.add_argument(\"--model\", dest=\"model_path\", type=_make_parent_dirs_and_return_path,\
+        \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+        \n_outputs = train_model(**_parsed_args)\n"
+      image: python:3.8
+    inputs:
+      artifacts:
+      - {name: split-data-output_train, path: /tmp/inputs/input_train/data}
+      - {name: split-data-output_val, path: /tmp/inputs/input_val/data}
+      - {name: preprocess-data-scaler, path: /tmp/inputs/scaler/data}
+    outputs:
+      artifacts:
+      - {name: train-model-model, path: /tmp/outputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--input-train", {"inputPath": "input_train"}, "--input-val",
+          {"inputPath": "input_val"}, "--scaler", {"inputPath": "scaler"}, {"if":
+          {"cond": {"isPresent": "num_of_trial"}, "then": ["--num-of-trial", {"inputValue":
+          "num_of_trial"}]}}, "--model", {"outputPath": "model"}], "command": ["sh",
+          "-c", "(PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' ''matplotlib'' ''numpy'' ''joblib'' ''optuna''
+          || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+          ''pandas'' ''scikit-learn'' ''matplotlib'' ''numpy'' ''joblib'' ''optuna''
+          --user) && \"$0\" \"$@\"", "sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef train_model(input_train, input_val,
+          scaler_path, model_path, num_of_trial = 100):\n\n    import joblib\n    import
+          optuna\n    import pandas as pd\n    from sklearn.pipeline import Pipeline\n    from
+          sklearn.linear_model import LogisticRegression\n    from sklearn.ensemble
+          import RandomForestClassifier\n    from sklearn.metrics import accuracy_score\n\n    import
+          logging\n\n    logging.basicConfig(level=logging.INFO)\n    logger = logging.getLogger(__name__)\n\n    logger.info(f''Reading
+          data from source'')\n\n    df_train= pd.read_csv(input_train)\n    X_train
+          = df_train.drop(columns=[''target''])\n    y_train = df_train[''target'']\n\n    df_val=
+          pd.read_csv(input_val)\n    X_val = df_val.drop(columns=[''target''])\n    y_val
+          = df_val[''target'']\n\n    logger.info(f''Reading Scaler'')\n\n    scaler
+          = joblib.load(scaler_path)\n\n    # Scale the data\n    X_train_scaled =
+          scaler.transform(X_train)\n    X_val_scaled = scaler.transform(X_val)\n\n    #
+          Define the objective function for Optuna\n    def objective(trial):\n        model_name
+          = trial.suggest_categorical(''model'', [''LogisticRegression'', ''RandomForest''])\n\n        if
+          model_name == ''LogisticRegression'':\n            C = trial.suggest_float(''C'',
+          1e-4, 1e2, log=True)\n            l1_ratio = trial.suggest_float(''l1_ratio'',
+          0, 1)\n\n            model = LogisticRegression(\n                penalty=''elasticnet'',
+          \n                C=C, \n                solver = ''saga'',\n                l1_ratio=l1_ratio\n            )\n\n        else:
+          \n            n_estimators = trial.suggest_int(''n_estimators'', 10, 100)\n            max_depth
+          = trial.suggest_int(''max_depth'', 2, 8)\n            min_samples_split
+          = trial.suggest_int(''min_samples_split'', 2, 10)\n            model = RandomForestClassifier(\n                n_estimators=n_estimators,\n                max_depth=max_depth,\n                min_samples_split=min_samples_split\n            )\n\n        model.fit(X_train_scaled,
+          y_train)\n        y_pred = model.predict(X_val_scaled)\n        accuracy
+          = accuracy_score(y_val, y_pred)\n\n        logger.info(\"*\"*30)\n        logger.info(f''{model}'')\n        logger.info(\"*\"*30)\n        logger.info(f\"accuracy
+          {accuracy}\")\n\n        return accuracy\n\n    logger.info(f''Hiperparameter
+          tunning'')\n\n    study = optuna.create_study(direction=''maximize'')\n    study.optimize(objective,
+          n_trials=num_of_trial)\n\n    # Get the best model\n    best_trial = study.best_trial\n    if
+          best_trial.params[''model''] == ''LogisticRegression'':\n            best_model
+          = LogisticRegression(\n                penalty=''elasticnet'',\n                C=best_trial.params[''C''],\n                solver=''saga'',\n                l1_ratio=best_trial.params[''l1_ratio'']\n            )\n    else:\n        best_model
+          = RandomForestClassifier(\n            n_estimators=best_trial.params[''n_estimators''],\n            max_depth=best_trial.params[''max_depth''],\n            min_samples_split=best_trial.params[''min_samples_split'']\n        )\n\n    final_pipeline
+          = Pipeline([\n        (''scaler'', scaler),\n        (''model'', best_model)\n    ])\n\n    #
+          Train the final pipeline on the full training data\n    final_pipeline.fit(X_train,
+          y_train)\n\n    # Evaluate the model on the validation data\n    y_val_pred
+          = final_pipeline.predict(X_val)\n    val_accuracy = accuracy_score(y_val,
+          y_val_pred)\n\n    logging.info(f\"Best model parameters: {best_trial.params}\")\n    logging.info(f\"Validation
+          accuracy: {val_accuracy}\")\n\n    logging.info(f\"Saving model at: {model_path}\")\n\n    joblib.dump(final_pipeline,
+          model_path)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Train
+          model'', description='''')\n_parser.add_argument(\"--input-train\", dest=\"input_train\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--input-val\",
+          dest=\"input_val\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--scaler\",
+          dest=\"scaler_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--num-of-trial\",
+          dest=\"num_of_trial\", type=int, required=False, default=argparse.SUPPRESS)\n_parser.add_argument(\"--model\",
+          dest=\"model_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = train_model(**_parsed_args)\n"], "image": "python:3.8"}}, "inputs": [{"name":
+          "input_train"}, {"name": "input_val"}, {"name": "scaler"}, {"default": "100",
+          "name": "num_of_trial", "optional": true, "type": "Integer"}], "name": "Train
+          model", "outputs": [{"name": "model", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"num_of_trial": "100"}'}
+  - name: training-pipeline
+    dag:
+      tasks:
+      - {name: get-data, template: get-data}
+      - {name: get-noise-date, template: get-noise-date}
+      - name: join-data
+        template: join-data
+        dependencies: [get-data, get-noise-date]
+        arguments:
+          artifacts:
+          - {name: get-data-output_text, from: '{{tasks.get-data.outputs.artifacts.get-data-output_text}}'}
+          - {name: get-noise-date-output, from: '{{tasks.get-noise-date.outputs.artifacts.get-noise-date-output}}'}
+      - name: preprocess-data
+        template: preprocess-data
+        dependencies: [split-data]
+        arguments:
+          artifacts:
+          - {name: split-data-output_train, from: '{{tasks.split-data.outputs.artifacts.split-data-output_train}}'}
+      - name: split-data
+        template: split-data
+        dependencies: [join-data]
+        arguments:
+          artifacts:
+          - {name: join-data-output, from: '{{tasks.join-data.outputs.artifacts.join-data-output}}'}
+      - name: train-model
+        template: train-model
+        dependencies: [preprocess-data, split-data]
+        arguments:
+          artifacts:
+          - {name: preprocess-data-scaler, from: '{{tasks.preprocess-data.outputs.artifacts.preprocess-data-scaler}}'}
+          - {name: split-data-output_train, from: '{{tasks.split-data.outputs.artifacts.split-data-output_train}}'}
+          - {name: split-data-output_val, from: '{{tasks.split-data.outputs.artifacts.split-data-output_val}}'}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner
